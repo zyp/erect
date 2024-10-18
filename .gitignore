@@ -1,0 +1,10 @@
+.pdm-build
+.pdm-python
+pdm.lock
+.venv
+dist/
+
+__pycache__/
+
+.erect.db
+build/

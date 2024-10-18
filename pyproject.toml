@@ -1,0 +1,38 @@
+[project]
+name = "erect"
+description = "Build system"
+authors = [
+    {name = "Vegard Storheil Eriksen", email = "zyp@jvnv.net"},
+]
+dependencies = [
+    "click>=8.1.7",
+    "jinja2>=3.1.4",
+]
+requires-python = ">=3.10"
+dynamic = ["version"]
+readme = "README.md"
+license = {text = "MIT"}
+
+[project.scripts]
+erect = "erect.cli:main"
+erect-modmap = "erect.util.module_mapper:main"
+
+[project.optional-dependencies]
+diagnostic = [
+    "bokeh>=3.6.0",
+    "graphviz>=0.20.3",
+]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.pdm]
+distribution = true
+
+[tool.pdm.version]
+source = "scm"
+
+[tool.pdm.dev-dependencies]
+test = [
+]
