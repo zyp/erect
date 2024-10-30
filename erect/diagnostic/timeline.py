@@ -1,3 +1,5 @@
+import itertools
+
 def plot_timeline(ctx, main_start, run_start):
     from bokeh.models import BasicTickFormatter
     from bokeh.plotting import figure, show
@@ -7,19 +9,22 @@ def plot_timeline(ctx, main_start, run_start):
     ]
 
     for task in ctx.tasks.values():
-        if task._start is None or task._end is None:
-            continue
-
-        tasks.append((task._start, task._end, task.id.str))
+        for (start, e), (end, next_e) in itertools.pairwise(task._events):
+            if e == 'running':
+                tasks.append((start, end, task.id.str))
 
     source = {'name': [], 'start': [], 'end': []}
+    tasks_sorted = []
     for start, end, name in reversed(sorted(tasks)):
         source['name'].append(name)
         source['start'].append(start - main_start)
         source['end'].append(end - main_start)
 
+        if name not in tasks_sorted:
+            tasks_sorted.append(name)
+
     p = figure(
-        y_range = source['name'],
+        y_range = tasks_sorted,
         toolbar_location=None,
         sizing_mode='stretch_width',
         height = 15 * len(tasks),

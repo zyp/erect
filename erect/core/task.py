@@ -55,8 +55,7 @@ class Task:
 
         self._input_files = []
         self._output_files = []
-        self._start = None
-        self._end = None
+        self._events = []
         return self
 
     def add_input_files(self, *files):
@@ -132,14 +131,14 @@ class Task:
             await async_run(self._input_files)
 
             async with self.ctx.task_semaphore:
-                self._start = time.monotonic()
+                self._events.append((time.monotonic(), 'running'))
                 if self._uptodate():
                     self.result = self.ctx.cache[self.id.mangled]['result']
                 else:
                     self.result = await self.run()
                     self._save_cache()
                 await self.post_run()
-                self._end = time.monotonic()
+                self._events.append((time.monotonic(), 'done'))
 
             self.done = True
 
