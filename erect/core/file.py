@@ -47,10 +47,6 @@ class File:
         self.ctx = ctx
         self.path = path
 
-        dynamic = path.suffix == '.gcm' # TODO: refactor this up
-        
-        self._future = asyncio.Future() if dynamic else None
-
         self._generator_task = None
         return self
 
@@ -63,13 +59,7 @@ class File:
         assert self._generator_task is None
         self._generator_task = task
 
-        if self._future is not None:
-            self._future.set_result(task)
-
     async def _run(self):
-        if self._future is not None:
-            await self._future
-
         if self.generator_task is not None:
             await self.generator_task._run()
 
