@@ -76,6 +76,9 @@ class Task:
     def dynamic_deps(self):
         return []
 
+    async def pre_run(self):
+        pass
+
     async def run(self):
         raise NotImplementedError()
 
@@ -130,6 +133,8 @@ class Task:
             await async_run(self.dynamic_deps())
 
             await async_run(self._input_files)
+
+            await self.pre_run()
 
             async with self.ctx.task_semaphore:
                 self._events.append((time.monotonic(), 'running'))
