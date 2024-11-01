@@ -51,6 +51,9 @@ class Env(core.Env):
     def executable(self, output_file, source_files, **kwargs):
         return Link(self, output_file, [pathlib.Path(f) for f in source_files], **kwargs)
 
+    def header_module(self, header):
+        return HeaderModule(self, header)
+
 class Compile(core.Task):
     env: Env
 
@@ -158,6 +161,75 @@ class Compile(core.Task):
 
         return {
             'modules_required': self._modules_required,
+            'modules_generated': self._modules_generated,
+        }
+
+    async def post_run(self):
+        # Report that modules are built.
+        registry = self.env.module_mapper.registry
+        for m in self.result['modules_generated']:
+            if not registry.module_exists(m):
+                registry.module_provided(m)
+
+class HeaderModule(core.Task):
+    env: Env
+
+    def __new__(cls, env, header):
+        try:
+            self = super().__new__(cls, env.ctx, ('header_module', env.build_dir, header))
+        except core.TaskExists as e:
+            if e.task.env == env:
+                return e.task
+            raise
+
+        self.env = env
+        self.header = header
+        self._modules_generated = []
+        return self
+
+    def input_metadata(self):
+        return super().input_metadata() | {
+            'toolchain_prefix': self.env.toolchain_prefix,
+            'toolchain_suffix': self.env.toolchain_suffix,
+            'flags': self.env.cxxflags,
+            'defines': self.env.defines,
+            'include_path': self.env.include_path,
+        }
+
+    def dynamic_deps(self):
+        #self.add_input_files(*self.scan_deps.result['file_deps'])
+
+        return []
+
+    async def run(self):
+        cmi_dir = self.env.build_dir / 'cmi'
+
+        assert self.env.module_mapper is not None
+
+        compiler = f'{self.env.toolchain_prefix}g++{self.env.toolchain_suffix}'
+        flags = self.env.cxxflags.copy()
+        flags.extend([
+            '-fmodules-ts',
+            self.env.module_mapper.gcc_arg(self.header),
+        ])
+
+        for define in self.env.defines:
+            flags.extend(['-D', define])
+        for path in self.env.include_path:
+            flags.extend(['-I', path])
+
+        await subprocess([
+            compiler,
+            *flags,
+            '-x', 'c++-user-header',
+            '-c',
+            self.header,
+        ])
+
+        # Add generated CMI files as output files.
+        self.add_output_files(*(self.env.module_mapper.gcm_path(module) for module in self._modules_generated))
+
+        return {
             'modules_generated': self._modules_generated,
         }
 
