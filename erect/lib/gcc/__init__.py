@@ -1,9 +1,9 @@
 import pathlib
 import asyncio
 
-from .. import core
-from ..util.subprocess import subprocess
-from ..util.module_mapper import ModuleMapper
+from ... import core
+from ...util.subprocess import subprocess
+from .module_mapper import ModuleMapper
 
 __all__ = ['Compile', 'Link']
 

@@ -1,9 +1,8 @@
-import sys
 import asyncio
 
 class Handler:
-    def __init__(self, cmi_dir, reader, writer):
-        self.cmi_dir = cmi_dir
+    def __init__(self, mapper, reader, writer):
+        self.mapper = mapper
         self.reader = reader
         self.writer = writer
 
@@ -23,7 +22,7 @@ class Handler:
                 return 'HELLO 1 erect-modmap'
 
             case ('MODULE-REPO',):
-                return f'PATHNAME {self.cmi_dir}'
+                return f'PATHNAME {self.mapper.cmi_dir}'
 
             case ('MODULE-EXPORT', module, *_):
                 return f'PATHNAME {module}.gcm'
@@ -54,46 +53,20 @@ class Handler:
             await self.writer.drain()
         self.writer.close()
 
-async def start_tcp(cmi_dir):
-    async def handle_client(reader, writer):
-        m = Handler(cmi_dir, reader, writer)
-        await m.run()
-
-    return await asyncio.start_server(handle_client, host = '::1', port = None)
-
 class ModuleMapper:
     def __init__(self, cmi_dir):
         self.port = None
         self.cmi_dir = cmi_dir
 
+    async def _handle_client(self, reader, writer):
+        m = Handler(self, reader, writer)
+        await m.run()
+
     async def start(self):
-        server = await start_tcp(self.cmi_dir)
+        server = await asyncio.start_server(self._handle_client, host = '::1', port = None)
         self.port = server.sockets[0].getsockname()[1]
 
     @property
     def gcc_arg(self):
         assert self.port is not None
         return f'-fmodule-mapper=localhost:{self.port}'
-
-async def connect_stdin_stdout():
-    loop = asyncio.get_event_loop()
-    reader = asyncio.StreamReader()
-    protocol = asyncio.StreamReaderProtocol(reader)
-    await loop.connect_read_pipe(lambda: protocol, sys.stdin)
-    w_transport, w_protocol = await loop.connect_write_pipe(asyncio.streams.FlowControlMixin, sys.stdout)
-    writer = asyncio.StreamWriter(w_transport, w_protocol, reader, loop)
-    return reader, writer
-
-async def async_main(cmi_dir):
-    reader, writer = await connect_stdin_stdout()
-
-    m = Handler(cmi_dir, reader, writer)
-    await m.run()
-
-def main():
-    if len(sys.argv) > 1:
-        cmi_dir = sys.argv[1]
-    else:
-        cmi_dir = 'build/cmi/'
-
-    asyncio.run(async_main(cmi_dir))

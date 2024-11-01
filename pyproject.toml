@@ -15,7 +15,6 @@ license = {text = "MIT"}
 
 [project.scripts]
 erect = "erect.cli:main"
-erect-modmap = "erect.util.module_mapper:main"
 
 [project.optional-dependencies]
 diagnostic = [
