@@ -1,5 +1,6 @@
 import asyncio
 import shelve
+import sys
 
 __all__ = ['Context']
 
@@ -14,6 +15,7 @@ class Context:
         self.files = {}
         self._start_coros = []
 
+        self.max_concurrent_tasks = max_concurrent_tasks
         self.task_semaphore = asyncio.Semaphore(max_concurrent_tasks or 1)
 
         if cache_file is False:
@@ -34,6 +36,17 @@ class Context:
 
         _global_context = None
 
+    async def _check_deadlock(self, tg):
+        loop = asyncio.get_running_loop()
+
+        while True:
+            await asyncio.sleep(0.1)
+
+            if self.task_semaphore._value >= self.max_concurrent_tasks and not loop._ready:
+                tg._abort()
+                print('All remaining tasks are blocked, aborting.', file = sys.stderr)
+                return
+
     def start_async(self, coro):
         self._start_coros.append(coro)
 
@@ -42,6 +55,8 @@ class Context:
             await coro
 
         async with asyncio.TaskGroup() as tg:
+            asyncio.create_task(self._check_deadlock(tg))
+
             for task in tasks:
                 tg.create_task(task._run())
 
