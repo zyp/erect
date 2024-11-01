@@ -8,6 +8,11 @@ async def subprocess(cmd, *, stdout = None, stderr = None):
         stdout = stdout,
         stderr = stderr,
     )
-    code = await process.wait()
-    if code != 0:
-        raise RuntimeError(f'Process returned {code}')
+    try:
+        code = await process.wait()
+        if code != 0:
+            raise RuntimeError(f'Process returned {code}')
+    finally:
+        if process.returncode is None:
+            process.terminate()
+            await process.wait()
