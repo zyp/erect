@@ -1,6 +1,7 @@
 import asyncio
 import time
 import pathlib
+import contextlib
 
 from .context import Context
 from .file import File
@@ -141,6 +142,16 @@ class Task:
                 self._events.append((time.monotonic(), 'done'))
 
             self.done = True
+
+    @contextlib.asynccontextmanager
+    async def mark_suspended(self):
+        self._events.append((time.monotonic(), 'suspended'))
+        self.ctx.task_semaphore.release()
+        try:
+            yield
+        finally:
+            await self.ctx.task_semaphore.acquire()
+            self._events.append((time.monotonic(), 'running'))
 
 async def async_run(tasks):
     async with asyncio.TaskGroup() as tg:
