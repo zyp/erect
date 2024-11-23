@@ -73,9 +73,6 @@ class Task:
     def input_metadata(self):
         return {}
 
-    def dynamic_deps(self):
-        return []
-
     async def pre_run(self):
         pass
 
@@ -100,19 +97,12 @@ class Task:
             if not fingerprint.check(path):
                 return False
 
-        ## TODO: This condition should be updated.
-        #if not self._input_files or not self._output_files:
-        #    return False
-        
         for f in self._input_files:
             assert f.path.exists(), f'Required file {f.path} for task {self.id} does not exist.'
-        
+
         for f in self._output_files:
             if not f.path.exists():
                 return False
-        
-        #if max(f.path.stat().st_mtime for f in self._input_files) > min(f.path.stat().st_mtime for f in self._output_files):
-        #    return False
 
         return True
 
@@ -129,10 +119,6 @@ class Task:
                 return self.result
 
             await async_run(self.dependencies + self._input_files)
-
-            await async_run(self.dynamic_deps())
-
-            await async_run(self._input_files)
 
             await self.pre_run()
 

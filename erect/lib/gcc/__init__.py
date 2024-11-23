@@ -196,11 +196,6 @@ class HeaderModule(core.Task):
             'include_path': self.env.include_path,
         }
 
-    def dynamic_deps(self):
-        #self.add_input_files(*self.scan_deps.result['file_deps'])
-
-        return []
-
     async def run(self):
         cmi_dir = self.env.build_dir / 'cmi'
 
