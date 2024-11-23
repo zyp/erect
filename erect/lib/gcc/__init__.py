@@ -135,6 +135,12 @@ class Compile(core.Task):
             '-MF', dep_file,
         ])
 
+        if not dep_file.exists():
+            return {
+                'modules_required': self._modules_required,
+                'modules_generated': self._modules_generated,
+            }
+
         depmap = {}
 
         with open(dep_file) as f:
