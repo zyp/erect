@@ -24,6 +24,10 @@ class Env(core.Env):
     'C/C++ preprocessor defines'
     include_path: list[str | pathlib.Path]
     'Include path'
+    lib_path: list[str | pathlib.Path]
+    'Library path'
+    libs: list[str]
+    'Libraries'
 
     def __init__(self, *, cxx_modules = False, **kwargs):
         super().__init__(**kwargs)
@@ -35,6 +39,8 @@ class Env(core.Env):
         self.ldflags = []
         self.defines = []
         self.include_path = []
+        self.lib_path = []
+        self.libs = []
 
         if cxx_modules:
             self.module_mapper = ModuleMapper(self, self.build_dir / 'cmi')
@@ -261,6 +267,8 @@ class Link(core.Task):
             'ld_script': self.ld_script,
             'toolchain': self.env.toolchain_prefix,
             'flags': self.env.ldflags,
+            'lib_path': self.env.lib_path,
+            'libs': self.env.libs,
         }
 
     async def run(self):
@@ -272,6 +280,9 @@ class Link(core.Task):
 
         ldflags = self.env.ldflags[:]
 
+        for path in self.env.lib_path:
+            ldflags.extend(['-L', path])
+
         if self.ld_script is not None:
             ldflags.extend(['-T', self.ld_script])
 
@@ -280,6 +291,7 @@ class Link(core.Task):
             *ldflags,
             *(str(t.object_file) for t in self.object_tasks),
             '-o', elf_file,
+            *(f'-l{lib}' for lib in self.env.libs),
         ])
 
         return elf_file
